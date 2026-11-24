@@ -2,6 +2,9 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -26,6 +29,13 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 var authOptions = builder.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions();
+var localEnvironment = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Demo");
+if (!localEnvironment && (authOptions.ExposeSensitiveTokens
+    || builder.Configuration.GetValue("Seed:DemoData", false)
+    || databaseProvider.Equals("InMemory", StringComparison.OrdinalIgnoreCase)))
+{
+    throw new InvalidOperationException("Tokens sensíveis e dados em memória/demo só são permitidos em Development ou Demo.");
+}
 
 if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey) || jwtOptions.SigningKey.Length < 32)
 {
@@ -40,6 +50,34 @@ builder.Services.AddInfrastructure(connectionString, databaseProvider);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("AuthAttempts", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Configuration.GetValue("Security:AuthAttemptsPerMinute", 10),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.OnRejected = async (context, ct) =>
+    {
+        var response = context.HttpContext.Response;
+        response.StatusCode = StatusCodes.Status429TooManyRequests;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            response.Headers.RetryAfter = Math.Ceiling(retryAfter.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        await response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = 429,
+            Title = "Muitas tentativas",
+            Detail = "Aguarde antes de tentar novamente.",
+            Instance = context.HttpContext.Request.Path,
+            Extensions = { ["code"] = "auth.rate_limited" }
+        }, options: null, contentType: "application/problem+json", cancellationToken: ct);
+    };
+});
 
 builder.Services
     .AddControllers(options => options.Filters.Add<ValidationFilter>())
@@ -53,6 +91,17 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = context =>
+            {
+                context.HandleResponse();
+                context.Response.Headers.WWWAuthenticate = "Bearer";
+                return WriteAuthProblem(context.HttpContext, 401, "auth.required", "Autenticação necessária ou sessão expirada.");
+            },
+            OnForbidden = context => WriteAuthProblem(context.HttpContext, 403,
+                "auth.forbidden", "Você não tem permissão para acessar este recurso.")
+        };
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -114,6 +163,15 @@ if (allowedOrigins.Length > 0)
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    if (context.Request.Path.StartsWithSegments("/api"))
+        context.Response.Headers.CacheControl = "no-store";
+    await next();
+});
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Demo"))
 {
@@ -123,11 +181,13 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Demo"))
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseRouting();
 
 if (allowedOrigins.Length > 0)
 {
     app.UseCors("Frontend");
 }
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -162,6 +222,19 @@ if (app.Configuration.GetValue("Seed:DemoData", false))
 }
 
 app.Run();
+
+static Task WriteAuthProblem(HttpContext context, int status, string code, string detail)
+{
+    context.Response.StatusCode = status;
+    return context.Response.WriteAsJsonAsync(new ProblemDetails
+    {
+        Status = status,
+        Title = status == 401 ? "Não autenticado" : "Acesso negado",
+        Detail = detail,
+        Instance = context.Request.Path,
+        Extensions = { ["code"] = code, ["traceId"] = context.TraceIdentifier }
+    }, options: null, contentType: "application/problem+json", cancellationToken: context.RequestAborted);
+}
 
 /// <summary>Exposto para testes de integração com WebApplicationFactory.</summary>
 public partial class Program

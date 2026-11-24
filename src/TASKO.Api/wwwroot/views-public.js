@@ -135,6 +135,7 @@ async function renderExplore(main, route, token) {
   const type = route.query.get('type') || '';
   const categoryId = route.query.get('categoryId') || '';
   const city = route.query.get('city') || '';
+  const serviceRegion = route.query.get('serviceRegion') || '';
   const term = route.query.get('term') || '';
   const page = Math.max(1, Number.parseInt(route.query.get('page') || '1', 10) || 1);
 
@@ -142,12 +143,13 @@ async function renderExplore(main, route, token) {
   if (type) query.set('type', type);
   if (categoryId) query.set('categoryId', categoryId);
   if (city) query.set('city', city);
+  if (serviceRegion) query.set('serviceRegion', serviceRegion);
   if (term) query.set('term', term);
 
   const result = await api(`/publications?${query.toString()}`);
   if (token !== routeToken) return;
 
-  const hasFilters = Boolean(type || categoryId || city || term);
+  const hasFilters = Boolean(type || categoryId || city || serviceRegion || term);
   const totalPages = result.totalPages || 0;
   const typeLabel = type === 'offer' ? 'ofertas' : type === 'request' ? 'demandas' : 'anúncios';
 
@@ -162,15 +164,20 @@ async function renderExplore(main, route, token) {
       <div>
         <p class="page-head__eyebrow">Explorar</p>
         <h1>Encontre o serviço certo</h1>
-        <p>Filtre por tipo, categoria e cidade. Todos os anúncios abertos aceitam propostas.</p>
+        <p>Filtre por tipo, categoria, cidade e região. Todos os anúncios abertos aceitam propostas.</p>
       </div>
     </div>
 
-    <form class="toolbar" data-form="explore-filters" role="search">
+    <form class="toolbar explore-filters" data-form="explore-filters" role="search">
       <div class="searchbar">
         ${icon('search')}
         <input name="term" type="search" value="${esc(term)}" placeholder="Buscar por título ou descrição" aria-label="Buscar anúncios" />
       </div>
+      <button class="btn btn--outline explore-filters__toggle" type="button"
+        data-action="toggle-explore-filters" aria-expanded="false" aria-controls="explore-extra">
+        ${icon('filter')} Filtros${hasFilters ? ' ativos' : ''}
+      </button>
+      <div class="explore-filters__extra" id="explore-extra">
       <select class="select" name="type" aria-label="Tipo de anúncio">
         <option value="">Tudo</option>
         <option value="offer" ${type === 'offer' ? 'selected' : ''}>Ofertas</option>
@@ -180,6 +187,8 @@ async function renderExplore(main, route, token) {
         ${categoryOptions(categoryId, true)}
       </select>
       <input class="input" name="city" value="${esc(city)}" placeholder="Cidade" aria-label="Cidade" />
+      <input class="input" name="serviceRegion" value="${esc(serviceRegion)}" placeholder="Região de atendimento" aria-label="Região de atendimento" />
+      </div>
       <button class="btn btn--primary" type="submit">Filtrar</button>
       ${hasFilters ? '<a class="btn btn--ghost" href="#/explore">Limpar</a>' : ''}
     </form>
@@ -210,20 +219,20 @@ async function renderPublicationPage(main, publicationId, token) {
   const me = state.session.user;
 
   const [reviews, engagementsResult, authorProfile] = await Promise.all([
-    api(`/publications/${publicationId}/reviews?pageSize=10`).catch(() => ({ items: [] })),
-    api('/engagements?pageSize=50').catch(() => ({ items: [] })),
+    api(`/publications/${publicationId}/reviews?page=1&pageSize=10`),
+    participantEngagement(publicationId),
     api(`/users/${publication.authorId}/profile`).catch(() => null),
   ]);
 
   let proposals = [];
   if (publication.authorId === me.id) {
-    proposals = await api(`/publications/${publicationId}/proposals`).catch(() => []);
+    proposals = await api(`/publications/${publicationId}/proposals`);
   }
 
   if (token !== routeToken) return;
 
   const isAuthor = publication.authorId === me.id;
-  const engagement = (engagementsResult.items || []).find((item) => item.publicationId === publication.id) || null;
+  const engagement = engagementsResult;
   const alreadyReviewed = (reviews.items || []).some((review) => review.reviewerId === me.id);
 
   const history = (detail.statusHistory || []).map((entry) => `<div class="timeline__item">
@@ -331,6 +340,22 @@ async function renderPublicationPage(main, publicationId, token) {
   </div>`;
 }
 
+async function participantEngagement(publicationId) {
+  let previous = null;
+  let page = 1;
+  let pages;
+  do {
+    const result = await api(`/engagements?page=${page}&pageSize=50`);
+    const matches = result.items.filter((item) => item.publicationId === publicationId);
+    const active = matches.find((item) => item.status === 'active');
+    if (active) return active;
+    previous ||= matches[0] || null;
+    pages = result.totalPages;
+    page++;
+  } while (page <= pages);
+  return previous;
+}
+
 function authorCard(publication, profile) {
   const rating = profile && profile.averageRating !== null && profile.averageRating !== undefined
     ? `${stars(profile.averageRating)} <span>${Number(profile.averageRating).toFixed(1)} · ${plural(profile.reviewCount || 0, 'avaliação', 'avaliações')}</span>`
@@ -361,7 +386,7 @@ function proposalCard(proposal, options = {}) {
     <div class="proposal__head">
       ${avatarHtml(proposal.proposerName, 'avatar--sm')}
       <div class="proposal__who">
-        <strong>${esc(proposal.proposerName)}</strong>
+        <button class="linklike" type="button" data-action="open-profile" data-id="${esc(proposal.proposerId)}">${esc(proposal.proposerName)}</button>
         <small>
           ${proposal.proposerCity ? `${esc(proposal.proposerCity)} · ` : ''}
           ${proposal.proposerRating !== null && proposal.proposerRating !== undefined ? `★ ${Number(proposal.proposerRating).toFixed(1)} · ` : ''}
@@ -472,7 +497,7 @@ async function renderPublishPage(main, editId, token) {
         <div class="field field--full">
           <label for="publish-description">Descrição</label>
           <textarea class="textarea" id="publish-description" name="description" placeholder="Explique o serviço, o que está incluído, prazos e diferenciais." required minlength="20" maxlength="4000">${esc(publication?.description || '')}</textarea>
-          <p class="hint">Entre 20 e 4000 caracteres.</p>
+          <p class="hint">Entre 20 e 4000 caracteres. Não publique telefone, e-mail, endereço completo, documentos ou dados bancários; o contato é liberado após o aceite.</p>
         </div>
         <div class="field">
           <label for="publish-city">Cidade</label>

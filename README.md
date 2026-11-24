@@ -17,7 +17,7 @@ de contato, avaliações, notificações e moderação por denúncia.
 | BCrypt.Net-Next | 4.2.0 |
 | Swashbuckle (OpenAPI) | 11.0.1 |
 | Frontend | HTML5, CSS3 e JavaScript ES2020, sem framework e sem build Node.js |
-| xUnit | 2.9.3 (45 testes) |
+| xUnit | 2.9.3 (50 casos: 47 domínio/serviços/HTTP, 2 Browser e 1 PostgreSQL opt-in) |
 
 ## Estrutura
 
@@ -33,6 +33,8 @@ docs/
   database/schema.sql    DDL idempotente gerado a partir da migration
   api/endpoints.md       Contrato resumido dos endpoints
   analysis/              Registro da análise e integração do protótipo visual
+  requirements/          Matriz de requisitos, implementação e evidências
+  testing.md             Testes opcionais, implantação e roteiro para a banca
 Dockerfile               Build multi-stage (sdk:10.0 → aspnet:10.0)
 docker-compose.yml       API + PostgreSQL 16 com healthcheck
 ```
@@ -105,7 +107,7 @@ A conexão pode ser trocada por `ConnectionStrings__Default` ou `appsettings.Dev
 
 ```powershell
 dotnet build                                              # compila a solução (TASKO.slnx)
-dotnet test tests/TASKO.Tests/TASKO.Tests.csproj          # 45 testes
+dotnet test tests/TASKO.Tests/TASKO.Tests.csproj          # 47 aprovados; 3 opt-in ignorados sem configuração
 dotnet ef migrations add <Nome> --project src/TASKO.Infrastructure --startup-project src/TASKO.Api --output-dir Persistence/Migrations
 dotnet ef database update --project src/TASKO.Infrastructure --startup-project src/TASKO.Api
 dotnet ef migrations script --idempotent --project src/TASKO.Infrastructure --startup-project src/TASKO.Api --output docs/database/schema.sql
@@ -113,6 +115,12 @@ dotnet ef migrations script --idempotent --project src/TASKO.Infrastructure --st
 
 `dotnet ef` usa a `TaskoDbContextFactory` (design-time), que lê `TASKO_DB_CONNECTION` ou cai no
 default `Host=localhost;Port=5432;Database=tasko;Username=tasko;Password=tasko`.
+
+Testes HTTP executam em processo via `WebApplicationFactory`. Os testes Browser usam Playwright
+.NET e uma Demo descartável; o teste PostgreSQL cria seu próprio banco temporário com migrations.
+Instruções completas em [`docs/testing.md`](docs/testing.md). O workflow
+`.github/workflows/validate.yml` automatiza build, testes e Chromium com serviço PostgreSQL 16;
+está configurado para push e Pull Request. Consulte a aba Actions para o resultado de cada execução.
 
 ## Autenticação
 
@@ -140,6 +148,15 @@ A interface em `src/TASKO.Api/wwwroot` é uma SPA com roteamento por hash. Ela i
 
 Access e refresh tokens ficam no `localStorage` neste cliente web. Em uma implantação com maior
 exigência de segurança, prefira refresh token em cookie `HttpOnly`/`Secure`.
+
+Cadastro/login/recuperação/reset compartilham limite de 10 tentativas por minuto por IP/instância
+(`Security:AuthAttemptsPerMinute`). Ao exceder, a API retorna 429 ProblemDetails e `Retry-After`.
+Não é um limiter distribuído; proxies precisam de configuração segura antes de confiar no IP
+encaminhado. Configurações sensíveis de demo são rejeitadas fora de `Development`/`Demo`.
+
+Atividades e moderação têm paginação navegável; explorar também filtra por região. Falhas de
+carregamento nas atividades não são mais apresentadas como listas vazias. Formulários bloqueiam
+envios simultâneos e modais retêm o foco do teclado e o devolvem ao fechar.
 
 ## Endpoints
 
@@ -172,11 +189,18 @@ Resumo por área (detalhes em [`docs/api/endpoints.md`](docs/api/endpoints.md)):
 | RN08 sem autoavaliação; alvo = contraparte do contrato | `Review.Create` |
 | RN09 edição/encerramento bloqueados com contratação ativa | `Publication.EnsureEditable` / `Cancel` |
 | RN10 denúncia não oculta conteúdo automaticamente | `Report.Create` (status `pending`) |
-| RN11/RN12 moderação humana; ocultação com justificativa | `ReportService.ResolveAsync` |
-| RNF03 paginação obrigatória com total | `PagedResponse<T>` em toda listagem |
+| RF17 moderação humana; ocultação com justificativa | `ReportService.ResolveAsync` |
+| RN11 advertência sobre dados sensíveis (síntese da análise) | Cadastro, publicação e proposta na SPA |
+| RN12 intermediação sem pagamento (síntese da análise) | Ausência de gateway/escrow no MVP |
+| Paginação com total (apoio a RNF03/RNF12) | `PagedResponse<T>` nas listagens paginadas |
 | RNF05 telefone/e-mail nunca em listagens públicas | `PublicProfileResponse` / `ProposalResponse` |
 | RNF10 erros RFC 7807 sem stack trace | `ExceptionHandlingMiddleware` |
 | RNF11 auditoria de ações críticas | `AuditService` → `activity_logs` |
+
+Os códigos acima seguem a síntese disponível, não uma transcrição certificada do documento
+original. Cobertura, testes e pendências em
+[`docs/requirements/traceability.md`](docs/requirements/traceability.md), inclusive RF03 parcial
+(atuação pós-cadastro) e limites da validação de acessibilidade/desempenho.
 
 ## Banco de dados
 
@@ -203,8 +227,8 @@ chat interno e envio de e-mail real (o MVP usa `LogEmailSender`). Notificações
 - **Sem validação de runtime com PostgreSQL neste ambiente**: o daemon do Docker não estava
   disponível, então `docker compose up` não foi executado. A migration foi gerada e o DDL
   inspecionado, mas o fluxo real contra Postgres deve ser validado no primeiro `up`.
-- Testes usam EF Core InMemory; recursos específicos de PostgreSQL (`FOR UPDATE`, `jsonb`,
-  índices parciais) só são exercitados no banco real.
+- Testes comuns usam EF Core InMemory; a suíte opt-in PostgreSQL verifica `FOR UPDATE`, `jsonb`,
+  índices parciais e rollback, mas sua execução local permanece pendente.
 - `IEmailSender` apenas registra em log; nenhum e-mail é entregue.
 - Refresh/reset usam hash SHA-256 (tokens são aleatórios de 48 bytes), não BCrypt.
 - Swagger UI exposto em `Development` e no perfil local `Demo`.

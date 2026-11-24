@@ -74,6 +74,12 @@ Regras: senha 8–128 com letra e número; e-mail normalizado (trim + lowercase)
 `forgot-password` responde sempre 200 com mensagem genérica; em `Development` (`Auth:ExposeSensitiveTokens`)
 devolve `resetToken` para facilitar testes.
 
+Cadastro, login, forgot/reset compartilham uma janela de 10 tentativas por minuto por IP e
+instância (`Security:AuthAttemptsPerMinute`). Excesso → 429 `application/problem+json`,
+`code: "auth.rate_limited"` e cabeçalho `Retry-After` em segundos. Refresh/logout não consomem
+essa janela. Tokens sensíveis e provider InMemory são rejeitados fora de Development/Demo.
+Respostas sob `/api` possuem `Cache-Control: no-store`.
+
 ## Usuários — `/api/v1/users`
 
 | Método | Rota | Auth | Descrição |

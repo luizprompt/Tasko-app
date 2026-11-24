@@ -34,17 +34,26 @@ async function renderActivities(main, route, token) {
   const requested = route.query.get('tab');
   const tab = ACTIVITY_TABS.some((item) => item.id === requested) ? requested : 'publications';
 
-  const [publications, proposals, engagements, notifications] = await Promise.all([
-    api('/publications/mine?pageSize=50').catch(() => ({ items: [], total: 0 })),
-    api('/proposals/mine?pageSize=50').catch(() => ({ items: [], total: 0 })),
-    api('/engagements?pageSize=50').catch(() => ({ items: [], total: 0 })),
-    api('/notifications?pageSize=50').catch(() => ({ items: [], total: 0 })),
+  const page = routePage(route);
+  const paths = {
+    publications: '/publications/mine', proposals: '/proposals/mine',
+    engagements: '/engagements', notifications: '/notifications',
+  };
+  // Falhas são exibidas pelo roteador, não como listas vazias.
+  const [result, unreadResult] = await Promise.all([
+    api(`${paths[tab]}?page=${page}&pageSize=${PAGE_SIZE}`),
+    api('/notifications/unread-count'),
   ]);
+  const empty = { items: [], total: 0 };
+  const publications = tab === 'publications' ? result : empty;
+  const proposals = tab === 'proposals' ? result : empty;
+  const engagements = tab === 'engagements' ? result : empty;
+  const notifications = tab === 'notifications' ? result : empty;
 
   const engagementItems = engagements.items || [];
   const publicationIds = [...new Set(engagementItems.map((item) => item.publicationId))];
   const details = await Promise.all(
-    publicationIds.map((id) => api(`/publications/${id}`).catch(() => null)),
+    publicationIds.map((id) => api(`/publications/${id}`)),
   );
   const statusByPublication = new Map(
     details.filter(Boolean).map((detail) => [detail.publication.id, detail.publication.status]),
@@ -54,7 +63,7 @@ async function renderActivities(main, route, token) {
   if (tab === 'engagements') {
     const completed = publicationIds.filter((id) => statusByPublication.get(id) === 'completed');
     const reviewPages = await Promise.all(
-      completed.map((id) => api(`/publications/${id}/reviews?pageSize=50`).catch(() => ({ items: [] }))),
+      completed.map((id) => api(`/publications/${id}/reviews?page=1&pageSize=50`)),
     );
     completed.forEach((id, index) => {
       if ((reviewPages[index].items || []).some((review) => review.reviewerId === me.id)) {
@@ -66,11 +75,9 @@ async function renderActivities(main, route, token) {
   if (token !== routeToken) return;
 
   const notificationItems = notifications.items || [];
-  const unread = notificationItems.filter((item) => !item.readAt).length;
+  const unread = unreadResult.count;
   const counts = {
-    publications: publications.total ?? (publications.items || []).length,
-    proposals: proposals.total ?? (proposals.items || []).length,
-    engagements: engagements.total ?? engagementItems.length,
+    [tab]: result.total,
     notifications: unread,
   };
 
@@ -139,6 +146,7 @@ async function renderActivities(main, route, token) {
     </div>
 
     <div class="section" style="margin-top:18px">${content}</div>
+    ${paginationLinks(result, 'activities', { tab })}
   </div>`;
 }
 
@@ -482,7 +490,7 @@ async function renderModeration(main, route, token) {
   const requested = route.query.get('status') || 'pending';
   const filter = MODERATION_FILTERS.some((item) => item.id === requested) ? requested : 'pending';
 
-  const query = new URLSearchParams({ pageSize: '50' });
+  const query = new URLSearchParams({ page: String(routePage(route)), pageSize: String(PAGE_SIZE) });
   if (filter !== 'all') query.set('status', filter);
 
   const result = await api(`/admin/reports?${query.toString()}`);
@@ -528,7 +536,8 @@ async function renderModeration(main, route, token) {
 
     ${entries.length
       ? entries.map(moderationCard).join('')
-      : emptyState('shield', 'Nada na fila', 'Não há denúncias para este filtro. Novas denúncias aparecem aqui automaticamente.')}
+      : emptyState('shield', 'Nada na fila', 'Não há denúncias para este filtro. Atualize a página para consultar novamente.')}
+    ${paginationLinks(result, 'moderation', { status: filter })}
   </div>`;
 }
 

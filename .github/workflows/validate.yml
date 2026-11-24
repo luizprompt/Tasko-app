@@ -1,0 +1,55 @@
+name: Validar TASKO
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: tasko_test
+          POSTGRES_USER: tasko
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tasko -d postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TASKO_TEST_POSTGRES: Host=localhost;Port=5432;Database=postgres;Username=tasko;Password=tasko_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore
+      - run: dotnet build --no-restore --configuration Release
+      - run: dotnet test --no-build --configuration Release --logger trx --results-directory TestResults
+      - run: pwsh tests/TASKO.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Subir demo descartável
+        run: |
+          dotnet run --no-build --configuration Release --project src/TASKO.Api --launch-profile demo > demo.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl --fail --silent http://localhost:5237/health; then exit 0; fi
+            sleep 1
+          done
+          cat demo.log
+          exit 1
+      - name: Testes de navegador
+        env:
+          TASKO_E2E_URL: http://localhost:5237
+        run: dotnet test --no-build --configuration Release --filter Category=Browser --logger trx --results-directory BrowserResults
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados
+          path: |
+            TestResults/
+            BrowserResults/
+            demo.log

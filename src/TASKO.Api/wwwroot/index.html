@@ -7,7 +7,7 @@
   <meta name="description" content="TASKO é o marketplace que conecta quem precisa de um serviço a profissionais de confiança, com contato protegido, avaliações reais e moderação ativa." />
   <meta name="theme-color" content="#064e3b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/styles.css?v=20261123-3" />
+  <link rel="stylesheet" href="/styles.css?v=20261124-5" />
 </head>
 <body data-view="auth">
   <!-- ============================ Autenticação ============================ -->
@@ -114,9 +114,10 @@
             <div class="form-error" data-error hidden></div>
             <button class="btn btn--primary btn--block" type="submit">Criar minha conta</button>
             <p class="hint hint--center">Ao criar a conta você concorda com o uso responsável da plataforma.</p>
+            <p class="hint">Não inclua documentos, dados bancários ou informações sensíveis no nome e nos textos públicos do perfil.</p>
           </form>
 
-          <div class="demo-accounts">
+          <div class="demo-accounts" data-demo-only hidden>
             <button class="demo-accounts__toggle" type="button" data-action="toggle-demo" aria-expanded="false">
               <span>Contas de demonstração</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
@@ -137,7 +138,7 @@
             </div>
           </div>
         </div>
-        <p class="auth__note">Modo demonstração: os dados ficam em memória e são reiniciados quando a API para.</p>
+        <p class="auth__note" data-demo-only hidden>Modo demonstração: os dados ficam em memória e são reiniciados quando a API para.</p>
       </section>
     </div>
   </div>
@@ -220,9 +221,9 @@
   <div id="modal-root"></div>
   <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="/views-public.js?v=20261123-3"></script>
-  <script src="/views-account.js?v=20261123-3"></script>
-  <script src="/forms.js?v=20261123-3"></script>
-  <script src="/app.js?v=20261123-3"></script>
+  <script src="/views-public.js?v=20261124-3"></script>
+  <script src="/views-account.js?v=20261124-1"></script>
+  <script src="/forms.js?v=20261124-3"></script>
+  <script src="/app.js?v=20261124-1"></script>
 </body>
 </html>

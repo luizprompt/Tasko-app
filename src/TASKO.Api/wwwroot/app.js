@@ -20,6 +20,27 @@ const state = {
 
 let routeToken = 0;
 let refreshPromise = null;
+const busyActions = new WeakSet();
+let modalOpener = null;
+let pendingConfirmation = null;
+
+function routePage(route) {
+  const page = Number(route.query.get('page') || 1);
+  return Number.isSafeInteger(page) && page > 0 ? page : 1;
+}
+
+function paginationLinks(result, path, filters = {}) {
+  if (result.totalPages <= 1) return '';
+  const link = (page, label) => {
+    const query = new URLSearchParams({ ...filters, page: String(page) });
+    return `<a class="btn btn--outline btn--sm" href="#/${path}?${esc(query)}">${label}</a>`;
+  };
+  return `<nav class="pagination" aria-label="Paginação">
+    ${result.page > 1 ? link(result.page - 1, 'Anterior') : ''}
+    <span class="pagination__info">Página ${result.page} de ${result.totalPages} · ${result.total} registros</span>
+    ${result.page < result.totalPages ? link(result.page + 1, 'Próxima') : ''}
+  </nav>`;
+}
 
 /* ============================== utilidades ============================== */
 
@@ -386,6 +407,7 @@ async function checkHealth() {
     const data = await response.json();
     state.api = data;
     const database = String(data.database || '').toLowerCase();
+    $$('[data-demo-only]').forEach((node) => { node.hidden = database !== 'inmemory'; });
     const label = database === 'inmemory' ? 'modo demonstração' : 'PostgreSQL';
     element.className = 'api-status is-online';
     element.innerHTML = `<span class="dot"></span> API online · ${esc(label)}`;
@@ -600,6 +622,8 @@ function forbiddenState(message = 'Seu perfil não tem permissão para acessar e
 /* ============================== modais e toasts ============================== */
 
 function openModal(title, bodyHtml, options = {}) {
+  closeModal();
+  modalOpener = document.activeElement;
   const root = $('#modal-root');
   if (!root) return null;
   root.innerHTML = `<div class="modal-backdrop" data-modal-backdrop>
@@ -624,16 +648,21 @@ function openModal(title, bodyHtml, options = {}) {
 
   const modal = root.querySelector('.modal');
   requestAnimationFrame(() => {
-    const focusable = modal?.querySelector('input:not([type="hidden"]), select, textarea, button');
+    const focusable = modal?.querySelector('input:not([type="hidden"]), select, textarea, .modal__close');
     focusable?.focus();
   });
   return modal;
 }
 
 function closeModal() {
+  const confirmation = pendingConfirmation;
+  pendingConfirmation = null;
+  confirmation?.(false);
   const root = $('#modal-root');
   if (root) root.innerHTML = '';
   document.body.style.overflow = '';
+  if (modalOpener?.isConnected) modalOpener.focus();
+  modalOpener = null;
 }
 
 function confirmModal({ title, message, confirmLabel = 'Confirmar', tone = 'primary' }) {
@@ -643,6 +672,7 @@ function confirmModal({ title, message, confirmLabel = 'Confirmar', tone = 'prim
       resolve(false);
       return;
     }
+    pendingConfirmation = resolve;
     const foot = document.createElement('div');
     foot.className = 'modal__foot';
     foot.innerHTML = `<button class="btn btn--outline" type="button" data-confirm-cancel>Cancelar</button>
@@ -653,6 +683,7 @@ function confirmModal({ title, message, confirmLabel = 'Confirmar', tone = 'prim
       resolve(false);
     });
     foot.querySelector('[data-confirm-ok]').addEventListener('click', () => {
+      pendingConfirmation = null;
       closeModal();
       resolve(true);
     });
@@ -979,9 +1010,11 @@ function bindEvents() {
     const actionElement = event.target.closest('[data-action]');
     if (actionElement) {
       event.preventDefault();
-      handleAction(actionElement).catch((error) => {
-        toast(error?.message || 'Não foi possível concluir a operação.', 'error');
-      });
+      if (busyActions.has(actionElement)) return;
+      busyActions.add(actionElement);
+      handleAction(actionElement)
+        .catch((error) => toast(error?.message || 'Não foi possível concluir a operação.', 'error'))
+        .finally(() => busyActions.delete(actionElement));
     }
   });
 
@@ -989,22 +1022,38 @@ function bindEvents() {
     const form = event.target.closest('form[data-form]');
     if (!form) return;
     event.preventDefault();
+    if (form.dataset.busy === 'true') return;
 
     const handler = typeof FORM_HANDLERS !== 'undefined' ? FORM_HANDLERS[form.dataset.form] : null;
     if (!handler) return;
 
     clearFormErrors(form);
+    form.dataset.busy = 'true';
     setBusy(form, true);
     try {
       await handler(form);
     } catch (error) {
       showFormError(form, error);
     } finally {
+      delete form.dataset.busy;
       setBusy(form, false);
     }
   });
 
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Tab' && $('.modal')) {
+      const nodes = $$('button, input:not([type="hidden"]), select, textarea, a[href], [tabindex="0"]', $('.modal'))
+        .filter((node) => !node.disabled && node.getClientRects().length);
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
     if (event.key === 'Escape') {
       closeModal();
       closeUserMenu();
@@ -1031,8 +1080,9 @@ async function boot() {
       state.session.user = { ...state.session.user, ...profile };
       writeSession(state.session);
       await refreshUnread();
-    } catch {
-      clearSession();
+    } catch (error) {
+      if (error instanceof ApiError && [401, 403].includes(error.status)) clearSession();
+      else toast('Não foi possível atualizar sua sessão. Verifique a conexão e tente novamente.', 'error');
     }
   }
 

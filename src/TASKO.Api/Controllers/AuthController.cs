@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Tasko.Application.Contracts;
 using Tasko.Application.Services;
 
@@ -10,6 +11,7 @@ namespace Tasko.Api.Controllers;
 public sealed class AuthController(AuthService auth) : ControllerBase
 {
     [HttpPost("register")]
+    [EnableRateLimiting("AuthAttempts")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request, CancellationToken ct)
@@ -19,6 +21,7 @@ public sealed class AuthController(AuthService auth) : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("AuthAttempts")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     public Task<AuthResponse> Login(LoginRequest request, CancellationToken ct) =>
@@ -40,12 +43,14 @@ public sealed class AuthController(AuthService auth) : ControllerBase
     }
 
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("AuthAttempts")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ForgotPasswordResponse), StatusCodes.Status200OK)]
     public Task<ForgotPasswordResponse> ForgotPassword(ForgotPasswordRequest request, CancellationToken ct) =>
         auth.ForgotPasswordAsync(request, ct);
 
     [HttpPost("reset-password")]
+    [EnableRateLimiting("AuthAttempts")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, CancellationToken ct)

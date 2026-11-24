@@ -87,12 +87,18 @@ public sealed class PublicationRepository(TaskoDbContext db) : IPublicationRepos
         }
 
         // Lock pessimista: serializa aceites concorrentes da mesma publicação (RN04/RN05).
-        return await db.Publications
+        var publication = await db.Publications
             .FromSqlRaw("SELECT * FROM publications WHERE id = {0} FOR UPDATE", id)
             .Include(p => p.Author)
             .Include(p => p.Category)
             .Include(p => p.Proposals)
             .FirstOrDefaultAsync(ct);
+        // A proposta pode ter carregado esta publicação antes de esperar pelo lock.
+        // EF mantém a instância rastreada: recarregue o estado após adquirir o lock
+        // para não decidir com o snapshot anterior ao aceite concorrente.
+        if (publication is not null)
+            await db.Entry(publication).ReloadAsync(ct);
+        return publication;
     }
 
     public async Task<PagedResult<Publication>> SearchAsync(PublicationQuery query, CancellationToken ct = default)

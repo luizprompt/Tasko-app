@@ -72,7 +72,7 @@ function openResetModal(token = '') {
 function openProposeModal(publicationId, publicationTitle) {
   openModal(
     'Enviar proposta',
-    `<p class="hint" style="margin-bottom:14px">${publicationTitle ? `Para “${esc(publicationTitle)}”. ` : ''}O contato direto só é liberado depois do aceite.</p>
+    `<p class="hint" style="margin-bottom:14px">${publicationTitle ? `Para “${esc(publicationTitle)}”. ` : ''}O contato direto só é liberado depois do aceite. Não inclua documentos, endereço completo ou dados bancários na mensagem.</p>
     <form data-form="propose" data-id="${esc(publicationId)}" novalidate>
       <div class="field">
         <label for="propose-message">Mensagem</label>
@@ -272,6 +272,7 @@ const FORM_HANDLERS = {
       type: fieldValue(form, 'type'),
       categoryId: fieldValue(form, 'categoryId'),
       city: fieldValue(form, 'city'),
+      serviceRegion: fieldValue(form, 'serviceRegion'),
       term: fieldValue(form, 'term'),
     }));
   },
@@ -434,6 +435,12 @@ async function handleDomainAction(element) {
   const action = element.dataset.action;
 
   switch (action) {
+    case 'toggle-explore-filters': {
+      const form = element.closest('form');
+      const expanded = form.classList.toggle('is-expanded');
+      element.setAttribute('aria-expanded', String(expanded));
+      break;
+    }
     case 'edit-publication':
       navigate(`publish/${element.dataset.id}`);
       break;

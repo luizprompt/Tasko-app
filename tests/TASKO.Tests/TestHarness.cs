@@ -61,13 +61,13 @@ internal sealed class FakeEmailSender : IEmailSender
 
 internal sealed class TestHarness : IAsyncDisposable
 {
-    public TestHarness()
+    public TestHarness(DbContextOptions<TaskoDbContext>? databaseOptions = null)
     {
         var options = new DbContextOptionsBuilder<TaskoDbContext>()
             .UseInMemoryDatabase($"tasko-tests-{Guid.NewGuid()}")
             .Options;
 
-        Db = new TaskoDbContext(options);
+        Db = new TaskoDbContext(databaseOptions ?? options);
         Clock = new FakeClock(new DateTimeOffset(2026, 1, 10, 12, 0, 0, TimeSpan.Zero));
         CurrentUser = new FakeCurrentUser();
 
