@@ -73,7 +73,7 @@ async function renderHome(main, token) {
 
       <form class="hero__search" data-form="hero-search" role="search">
         ${icon('search')}
-        <input name="term" type="search" placeholder="Eletricista, diarista, pintura, montagem de móveis…" aria-label="Buscar serviços" />
+        <input name="term" type="search" placeholder="Eletricista, diarista, pintura…" aria-label="Buscar serviços" />
         <button class="btn btn--primary" type="submit">Buscar</button>
       </form>
 

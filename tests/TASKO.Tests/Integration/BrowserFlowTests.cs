@@ -33,6 +33,41 @@ public sealed class BrowserFlowTests
         async Task Register(IPage target, string name, string email, bool isProvider)
         {
             await target.GotoAsync("/");
+            var authLogo = target.Locator("#auth-view .brand__logo");
+            await Expect(authLogo).ToBeVisibleAsync();
+            await Expect(authLogo).ToHaveAttributeAsync("src", "/assets/brand/logos/tasko-horizontal-negativa.svg");
+            if (!isProvider)
+            {
+                await target.SetViewportSizeAsync(1280, 900);
+                await target.ScreenshotAsync(new()
+                {
+                    Path = Path.Combine(AppContext.BaseDirectory, "brand-login-desktop.png"),
+                    Animations = ScreenshotAnimations.Disabled
+                });
+                await target.SetViewportSizeAsync(390, 844);
+                await Expect(target.Locator("#login-email")).ToBeVisibleAsync();
+                await Expect(target.Locator(".auth__features, .auth__stats")).ToHaveCountAsync(0);
+                var loginButton = await target.Locator("#login-form button[type=submit]").BoundingBoxAsync();
+                Assert.NotNull(loginButton);
+                Assert.True(loginButton.Y + loginButton.Height <= 844, "Entrar deve aparecer sem rolar a tela.");
+                Assert.False(await target.EvaluateAsync<bool>(
+                    "() => document.documentElement.scrollWidth > innerWidth"));
+                await target.ScreenshotAsync(new()
+                {
+                    Path = Path.Combine(AppContext.BaseDirectory, "login-mobile.png"),
+                    Animations = ScreenshotAnimations.Disabled
+                });
+                await target.SetViewportSizeAsync(1280, 900);
+                await target.GetByRole(AriaRole.Tab, new() { Name = "Criar conta" }).ClickAsync();
+                await Expect(target.Locator("#register-name")).ToBeVisibleAsync();
+                await target.ScreenshotAsync(new()
+                {
+                    Path = Path.Combine(AppContext.BaseDirectory, "register-desktop.png"),
+                    Animations = ScreenshotAnimations.Disabled
+                });
+                await target.GetByRole(AriaRole.Tab, new() { Name = "Entrar", Exact = true }).ClickAsync();
+                await Expect(target.Locator("#login-email")).ToBeVisibleAsync();
+            }
             await target.GetByRole(AriaRole.Tab, new() { Name = "Criar conta" }).ClickAsync();
             await target.Locator("#register-name").FillAsync(name);
             await target.Locator("#register-email").FillAsync(email);
@@ -129,6 +164,11 @@ public sealed class BrowserFlowTests
         var header = await page.Locator(".topbar").BoundingBoxAsync();
         Assert.NotNull(header);
         Assert.InRange(banner.Y - (header.Y + header.Height), -1, 1);
+        var logo = page.Locator(".topbar .brand__logo");
+        await Expect(logo).ToHaveAttributeAsync("src", "/assets/brand/logos/tasko-horizontal-principal.svg");
+        var logoBox = await logo.BoundingBoxAsync();
+        Assert.NotNull(logoBox);
+        Assert.InRange(logoBox.Width / logoBox.Height, 3.12f, 3.13f);
         await page.ScreenshotAsync(new()
         {
             Path = Path.Combine(AppContext.BaseDirectory, "mobile-home.png"),

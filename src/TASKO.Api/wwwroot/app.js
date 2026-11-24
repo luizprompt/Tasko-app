@@ -789,13 +789,7 @@ function setAuthTab(tab) {
   if (login) login.hidden = tab !== 'login';
   if (register) register.hidden = tab !== 'register';
   const title = $('#auth-title');
-  const subtitle = $('#auth-subtitle');
-  if (title) title.textContent = tab === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta';
-  if (subtitle) {
-    subtitle.textContent = tab === 'login'
-      ? 'Entre para acompanhar suas propostas e contratações.'
-      : 'Escolha como quer usar a TASKO e comece agora.';
-  }
+  if (title) title.textContent = tab === 'login' ? 'Entre na sua conta Tasko' : 'Crie sua conta Tasko';
 }
 
 function fillDemo(email, password) {

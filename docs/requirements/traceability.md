@@ -34,7 +34,7 @@ esses testes exigem uma instância Demo descartável e Chromium instalado.
 | 19 | Edição/encerramento | I | Autor, sem contrato ativo, estado aberto | `PublicationServiceTests` |
 | 20 | Atividades | I | Anúncios/propostas/contratos/notificações paginados | Browser (duas páginas e falha de carregamento simuladas) |
 | 21 | Recuperação de senha | P | Token opaco de uso único; e-mail apenas em log | `AuthServiceTests`; envio real fora do MVP |
-| 22 | Emerald Trust | I/V | `styles.css`, responsividade | Browser (390×844 sem overflow na home); revisão humana de todas as telas pendente |
+| 22 | Emerald Trust | I/V | Kit oficial, `identidade.css`, logos SVG, favicon e manifest | `BrandAssetsTests` + Browser (proporção da marca, mobile sem overflow); revisão humana de todas as telas pendente |
 
 ## Regras de negócio: evitar a divergência de numeração
 

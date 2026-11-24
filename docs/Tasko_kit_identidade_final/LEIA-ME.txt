@@ -1,0 +1,8 @@
+TASKO — EMERALD TRUST / V1.0
+
+logos: assinaturas SVG e PNG transparentes.
+icones: ícones de aplicativo 1024 px, em SVG e PNG.
+web: favicon, ícones PWA, manifest de exemplo e CSS.
+guia: guia de marca HTML autocontido e prancha PNG.
+
+Geometria do símbolo preservada do estudo aprovado, com recorte transparente ao redor do losango dourado. Tipografia Arimo Bold (equivalente ao Arial), convertida em curvas. Sem pesquisa de anterioridade.

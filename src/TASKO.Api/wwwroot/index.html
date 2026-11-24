@@ -6,60 +6,30 @@
   <title>TASKO — Conectando serviços com confiança</title>
   <meta name="description" content="TASKO é o marketplace que conecta quem precisa de um serviço a profissionais de confiança, com contato protegido, avaliações reais e moderação ativa." />
   <meta name="theme-color" content="#064e3b" />
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/styles.css?v=20261124-5" />
+  <link rel="icon" href="/favicon.svg?v=brand-1" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.ico?v=brand-1" sizes="any" />
+  <link rel="icon" href="/icons/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/assets/brand/identidade.css?v=brand-1" />
+  <link rel="stylesheet" href="/styles.css?v=20261124-login-5" />
 </head>
 <body data-view="auth">
   <!-- ============================ Autenticação ============================ -->
   <div id="auth-view" class="auth">
     <div class="auth__inner">
-      <aside class="auth__brand">
-        <a class="brand brand--light" href="#/home" aria-label="TASKO">
-          <span class="brand__mark">T</span>
-          <span class="brand__word">TASKO<small>serviços com confiança</small></span>
+      <header class="auth__brand">
+        <a class="brand brand--light" href="#/home">
+          <img class="brand__logo" src="/assets/brand/logos/tasko-horizontal-negativa.svg"
+            width="500" height="160" alt="Tasko — início" />
         </a>
 
-        <p class="auth__eyebrow">Marketplace de serviços</p>
-        <h1>Conectando serviços<br />com <span>confiança</span>.</h1>
-        <p class="auth__lead">
-          Publique o que você oferece ou o que precisa resolver. Negocie com segurança,
-          libere o contato só depois do aceite e avalie quem realmente entregou.
-        </p>
-
-        <ul class="auth__features">
-          <li>
-            <span class="auth__feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
-            </span>
-            <span><strong>Contato protegido</strong><small>E-mail e telefone liberados apenas após o aceite da proposta.</small></span>
-          </li>
-          <li>
-            <span class="auth__feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 20.9l1.1-6.5L2.6 9.8l6.5-.9z"/></svg>
-            </span>
-            <span><strong>Avaliações reais</strong><small>Só quem concluiu o serviço pode avaliar a contraparte.</small></span>
-          </li>
-          <li>
-            <span class="auth__feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 9v5M12 17.5v.5"/></svg>
-            </span>
-            <span><strong>Moderação ativa</strong><small>Denúncias são analisadas por moderadores, nunca ocultadas automaticamente.</small></span>
-          </li>
-        </ul>
-
-        <div class="auth__stats">
-          <div><strong>2</strong><span>tipos de anúncio</span></div>
-          <div><strong>12</strong><span>categorias</span></div>
-          <div><strong>100%</strong><span>auditável</span></div>
-        </div>
-      </aside>
+        <p class="auth__tagline">Serviços locais com segurança e confiança.</p>
+      </header>
 
       <section class="auth__panel" aria-labelledby="auth-title">
         <div class="auth-card">
-          <div class="auth-card__head">
-            <h2 id="auth-title">Bem-vindo de volta</h2>
-            <p id="auth-subtitle">Entre para acompanhar suas propostas e contratações.</p>
-          </div>
+          <h1 id="auth-title" class="sr-only">Entre na sua conta Tasko</h1>
 
           <div class="tabs" role="tablist" aria-label="Entrar ou criar conta">
             <button class="tab is-active" type="button" role="tab" aria-selected="true" data-auth-tab="login">Entrar</button>
@@ -79,7 +49,10 @@
               </div>
             </div>
             <div class="form-error" data-error hidden></div>
-            <button class="btn btn--primary btn--block" type="submit">Entrar</button>
+            <button class="btn btn--primary btn--block" type="submit">
+              <span>Entrar na Tasko</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+            </button>
             <button class="linklike linklike--center" type="button" data-action="forgot-password">Esqueci minha senha</button>
           </form>
 
@@ -138,7 +111,7 @@
             </div>
           </div>
         </div>
-        <p class="auth__note" data-demo-only hidden>Modo demonstração: os dados ficam em memória e são reiniciados quando a API para.</p>
+        <p class="auth__note" data-demo-only hidden>Demonstração · os dados são reiniciados ao encerrar a API.</p>
       </section>
     </div>
   </div>
@@ -148,8 +121,8 @@
     <header class="topbar">
       <div class="topbar__inner container">
         <a class="brand" href="#/home">
-          <span class="brand__mark">T</span>
-          <span class="brand__word">TASKO<small>serviços com confiança</small></span>
+          <img class="brand__logo" src="/assets/brand/logos/tasko-horizontal-principal.svg"
+            width="500" height="160" alt="Tasko — início" />
         </a>
 
         <nav class="nav" aria-label="Navegação principal">
@@ -221,9 +194,9 @@
   <div id="modal-root"></div>
   <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="/views-public.js?v=20261124-3"></script>
+  <script src="/views-public.js?v=20261124-4"></script>
   <script src="/views-account.js?v=20261124-1"></script>
   <script src="/forms.js?v=20261124-3"></script>
-  <script src="/app.js?v=20261124-1"></script>
+  <script src="/app.js?v=20261124-login-2"></script>
 </body>
 </html>

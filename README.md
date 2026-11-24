@@ -17,7 +17,7 @@ de contato, avaliações, notificações e moderação por denúncia.
 | BCrypt.Net-Next | 4.2.0 |
 | Swashbuckle (OpenAPI) | 11.0.1 |
 | Frontend | HTML5, CSS3 e JavaScript ES2020, sem framework e sem build Node.js |
-| xUnit | 2.9.3 (50 casos: 47 domínio/serviços/HTTP, 2 Browser e 1 PostgreSQL opt-in) |
+| xUnit | 2.9.3 (51 casos: 48 domínio/serviços/HTTP/assets, 2 Browser e 1 PostgreSQL opt-in) |
 
 ## Estrutura
 
@@ -107,7 +107,7 @@ A conexão pode ser trocada por `ConnectionStrings__Default` ou `appsettings.Dev
 
 ```powershell
 dotnet build                                              # compila a solução (TASKO.slnx)
-dotnet test tests/TASKO.Tests/TASKO.Tests.csproj          # 47 aprovados; 3 opt-in ignorados sem configuração
+dotnet test tests/TASKO.Tests/TASKO.Tests.csproj          # 48 aprovados; 3 opt-in ignorados sem configuração
 dotnet ef migrations add <Nome> --project src/TASKO.Infrastructure --startup-project src/TASKO.Api --output-dir Persistence/Migrations
 dotnet ef database update --project src/TASKO.Infrastructure --startup-project src/TASKO.Api
 dotnet ef migrations script --idempotent --project src/TASKO.Infrastructure --startup-project src/TASKO.Api --output docs/database/schema.sql
@@ -134,6 +134,10 @@ Envie `Authorization: Bearer <accessToken>`. Enums trafegam como string em camel
 (`request`, `inNegotiation`, `provider`, ...).
 
 ## Interface web
+
+A marca oficial vem de `docs/Tasko_kit_identidade_final`: assinatura horizontal no cabeçalho,
+versão negativa na autenticação, favicon e ícones Apple Touch/manifest originais. Aplicação e
+validação documentadas em [`docs/brand-implementation.md`](docs/brand-implementation.md).
 
 A interface em `src/TASKO.Api/wwwroot` é uma SPA com roteamento por hash. Ela inclui:
 
