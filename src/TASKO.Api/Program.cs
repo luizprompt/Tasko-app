@@ -42,6 +42,11 @@ if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey) || jwtOptions.SigningKey.Le
     throw new InvalidOperationException("Jwt:SigningKey deve ser configurada com ao menos 32 caracteres.");
 }
 
+if (!localEnvironment && jwtOptions.SigningKey.Contains("change-me-before-deploy", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException("Jwt:SigningKey de exemplo não pode ser usada fora de Development ou Demo.");
+}
+
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddSingleton(authOptions);
 

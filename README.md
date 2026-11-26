@@ -17,7 +17,7 @@ de contato, avaliações, notificações e moderação por denúncia.
 | BCrypt.Net-Next | 4.2.0 |
 | Swashbuckle (OpenAPI) | 11.0.1 |
 | Frontend | HTML5, CSS3 e JavaScript ES2020, sem framework e sem build Node.js |
-| xUnit | 2.9.3 (51 casos: 48 domínio/serviços/HTTP/assets, 2 Browser e 1 PostgreSQL opt-in) |
+| xUnit | 2.9.3 (52 casos: 49 domínio/serviços/HTTP/assets, 2 Browser e 1 PostgreSQL opt-in) |
 
 ## Estrutura
 
@@ -61,6 +61,8 @@ Contas disponíveis:
 | Solicitante | `ana@tasko.demo` | `Demo1234` |
 | Prestador | `carlos@tasko.demo` | `Demo1234` |
 | Prestadora | `mariana@tasko.demo` | `Demo1234` |
+| Solicitante | `joao@tasko.demo` | `Demo1234` |
+| Prestador | `rafael@tasko.demo` | `Demo1234` |
 | Moderador | `moderador@tasko.local` | `Moderador123` |
 
 Os dados ficam somente em memória e são recriados quando a aplicação reinicia. O modo demo é
@@ -107,7 +109,7 @@ A conexão pode ser trocada por `ConnectionStrings__Default` ou `appsettings.Dev
 
 ```powershell
 dotnet build                                              # compila a solução (TASKO.slnx)
-dotnet test tests/TASKO.Tests/TASKO.Tests.csproj          # 48 aprovados; 3 opt-in ignorados sem configuração
+dotnet test tests/TASKO.Tests/TASKO.Tests.csproj          # 49 aprovados; 3 opt-in ignorados sem configuração
 dotnet ef migrations add <Nome> --project src/TASKO.Infrastructure --startup-project src/TASKO.Api --output-dir Persistence/Migrations
 dotnet ef database update --project src/TASKO.Infrastructure --startup-project src/TASKO.Api
 dotnet ef migrations script --idempotent --project src/TASKO.Infrastructure --startup-project src/TASKO.Api --output docs/database/schema.sql
@@ -120,7 +122,8 @@ Testes HTTP executam em processo via `WebApplicationFactory`. Os testes Browser 
 .NET e uma Demo descartável; o teste PostgreSQL cria seu próprio banco temporário com migrations.
 Instruções completas em [`docs/testing.md`](docs/testing.md). O workflow
 `.github/workflows/validate.yml` automatiza build, testes e Chromium com serviço PostgreSQL 16;
-está configurado para push e Pull Request. Consulte a aba Actions para o resultado de cada execução.
+está configurado para push e Pull Request. Em PRs vindos de fork, o mantenedor precisa aprovar a
+primeira execução em **Actions → Approve and run**; até lá `gh pr checks` não mostra resultados.
 
 ## Autenticação
 
@@ -156,7 +159,8 @@ exigência de segurança, prefira refresh token em cookie `HttpOnly`/`Secure`.
 Cadastro/login/recuperação/reset compartilham limite de 10 tentativas por minuto por IP/instância
 (`Security:AuthAttemptsPerMinute`). Ao exceder, a API retorna 429 ProblemDetails e `Retry-After`.
 Não é um limiter distribuído; proxies precisam de configuração segura antes de confiar no IP
-encaminhado. Configurações sensíveis de demo são rejeitadas fora de `Development`/`Demo`.
+encaminhado. Configurações sensíveis de demo são rejeitadas fora de `Development`/`Demo`; a API
+também se recusa a iniciar em produção com a chave JWT de exemplo do repositório.
 
 Atividades e moderação têm paginação navegável; explorar também filtra por região. Falhas de
 carregamento nas atividades não são mais apresentadas como listas vazias. Formulários bloqueiam

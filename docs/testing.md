@@ -9,7 +9,8 @@ docker compose config --quiet
 ```
 
 Os testes de API usam `WebApplicationFactory` em processo separado logicamente da demonstração,
-sem Postgres. Validam HTTP 429, ProblemDetails, contato anônimo bloqueado e cabeçalhos.
+sem Postgres. Validam HTTP 429, ProblemDetails, contato anônimo bloqueado, cabeçalhos e a recusa de
+chave JWT de exemplo fora de `Development`/`Demo`.
 
 ## PostgreSQL real
 
@@ -54,27 +55,36 @@ denúncia e oculta uma oferta pelo moderador. Os demais cenários validam pagina
 controladas, filtro de região e HTTP 503 visível. Não confundir essas respostas simuladas com
 teste de paginação do banco (coberto em `PublicationServiceTests`).
 
+No mobile (390×844), o teste percorre home, explorar, publicar, atividades, perfil e moderação,
+confere ausência de rolagem horizontal e lê todas as notificações pela interface. As capturas de
+login, cadastro e mobile ficam em `tests/TASKO.Tests/bin/Debug/net10.0/`.
+
 O limite de autenticação é compartilhado por IP e por instância (padrão 10/minuto para cadastro,
 login e reset). Ao repetir E2E rapidamente, aguarde uma janela ou reinicie a Demo; não desative
 a proteção em produção. Proxies não têm seus cabeçalhos confiados automaticamente.
 
 ## Roteiro para a banca
 
-1. Iniciar Demo e explicar que seus dados são descartáveis.
-2. Entrar como Ana; publicar demanda com prazo e orçamento, sem dados sensíveis.
-3. Entrar como Carlos em janela anônima; filtrar a região e enviar proposta.
-4. Ana consulta o perfil público (sem telefone/e-mail) e aceita.
-5. Ambos consultam contato; demonstrar que uma terceira conta não tem acesso.
-6. Ana confirma o combinado e conclui; ambos avaliam; segunda avaliação é bloqueada.
-7. Denunciar outra oferta aberta e mostrar que continua visível.
-8. Moderador analisa a denúncia, informa justificativa e oculta.
-9. Mostrar histórico, notificações e resultados dos testes.
-10. Declarar limitações: e-mail em log, sem pagamentos/chat, PostgreSQL local ainda não validado.
+Roteiro rápido com os dados semeados (não depende de criar conteúdo ao vivo):
+
+1. Iniciar a Demo e avisar que os dados são descartáveis; deixar Ana e Carlos já logados.
+2. Ana abre **Explorar** e um anúncio: mostrar que o card e o detalhe não expõem contato.
+3. Ana abre **Meus anúncios → “Preciso de eletricista para trocar disjuntor”**, com duas propostas.
+4. Aceitar a proposta do Carlos; mostrar recusa automática da outra, status, histórico e notificação.
+5. Ana clica em **Ver contato**; Carlos mostra o mesmo contrato do outro lado.
+6. Abrir o perfil do Carlos: nota 5,0 e avaliação do serviço concluído.
+7. Moderador abre a denúncia do anúncio do Rafael e oculta com justificativa.
+8. Declarar limitações: e-mail em log, sem pagamentos/chat, PostgreSQL local ainda não validado.
+9. Se quiser demonstrar cadastro/publicação, use uma conta nova e apague a Demo depois.
+
+Se o aceite já tiver sido feito no ensaio, reinicie a API antes de apresentar; o estado volta ao seed.
 
 ## Checklist antes de implantação
 
 - `ASPNETCORE_ENVIRONMENT=Production`; chave JWT própria e longa; nenhum seed demo.
 - `Auth__ExposeSensitiveTokens=false`; aplicação rejeita essa exposição fora de Dev/Demo.
+- A chave JWT de exemplo (`dev-only…`/`demo-only…`) é rejeitada fora de Dev/Demo; não reutilize
+  os valores de `appsettings.Development.json` ou `appsettings.Demo.json` em produção.
 - HTTPS no proxy; banco não exposto à Internet; backups e teste de restauração.
 - Segredos em variáveis/gerenciador seguro, nunca commits ou logs compartilhados.
 - Refresh atualmente continua no `localStorage`. Migrar para cookie HttpOnly requer também

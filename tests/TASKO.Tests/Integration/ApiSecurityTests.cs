@@ -42,6 +42,26 @@ public sealed class ApiSecurityTests
     }
 
     [Fact]
+    public void Production_rejects_sample_signing_key()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["Jwt:SigningKey"] = "dev-only-signing-key-change-me-before-deploy"
+                }));
+        });
+
+        var exception = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+        var messages = new List<string>();
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+            messages.Add(current.Message);
+        Assert.Contains(messages, message => message.Contains("SigningKey"));
+    }
+
+    [Fact]
     public async Task Anonymous_cannot_read_contact_and_api_responses_are_not_cached()
     {
         await using var factory = new DemoApiFactory();

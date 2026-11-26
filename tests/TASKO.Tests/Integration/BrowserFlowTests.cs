@@ -137,6 +137,7 @@ public sealed class BrowserFlowTests
 
         await using var moderator = await browser.NewContextAsync(new() { BaseURL = url });
         var moderation = await moderator.NewPageAsync();
+        moderation.PageError += (_, error) => scriptErrors.Add(error);
         await moderation.GotoAsync("/");
         await moderation.Locator("#login-email").FillAsync("moderador@tasko.local");
         await moderation.Locator("#login-password").FillAsync("Moderador123");
@@ -193,6 +194,28 @@ public sealed class BrowserFlowTests
             Assert.False(await page.EvaluateAsync<bool>(
                 "() => document.documentElement.scrollWidth > window.innerWidth"));
         }
+
+        // Notificações: leitura em massa e lista sem estouro horizontal.
+        await page.SetViewportSizeAsync(390, 844);
+        await page.GotoAsync("/#/activities?tab=notifications");
+        await Expect(page.Locator("[data-action=mark-all-read]")).ToBeVisibleAsync();
+        await page.Locator("[data-action=mark-all-read]").ClickAsync();
+        await Expect(page.Locator("[data-action=mark-all-read]")).ToHaveCountAsync(0);
+
+        // Demais telas principais no mobile, sem overflow horizontal.
+        foreach (var view in new[] { "publish", "activities", "profile" })
+        {
+            await page.GotoAsync($"/#/{view}");
+            await Expect(page.Locator(".page")).ToBeVisibleAsync();
+            Assert.False(await page.EvaluateAsync<bool>(
+                "() => document.documentElement.scrollWidth > window.innerWidth"));
+        }
+
+        await moderation.SetViewportSizeAsync(390, 844);
+        await moderation.GotoAsync("/#/moderation");
+        await Expect(moderation.Locator(".report-card").First).ToBeVisibleAsync();
+        Assert.False(await moderation.EvaluateAsync<bool>(
+            "() => document.documentElement.scrollWidth > window.innerWidth"));
         Assert.Empty(scriptErrors);
     }
 

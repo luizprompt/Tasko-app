@@ -30,11 +30,11 @@ esses testes exigem uma instância Demo descartável e Chromium instalado.
 | 15 | Avaliação | I/V | Após conclusão; duas partes; unicidade | `ReviewFlowTests`, Browser; índice real em `PostgresTests` |
 | 16 | Denúncia | I | `ReportService.CreateAsync` | Domínio + Browser (não oculta automaticamente) |
 | 17 | Moderação | I | Fila paginada; arquivar/ocultar com nota | Domínio + Browser (ocultação justificada de oferta aberta) |
-| 18 | Notificações | I/V | In-app, leitura individual/todas e paginação | Fluxos de serviço; ampliar E2E de leitura e paginação |
+| 18 | Notificações | I/V | In-app, leitura individual/todas e paginação | Serviço + Browser (lista e “marcar todas como lidas”); ampliar E2E de paginação |
 | 19 | Edição/encerramento | I | Autor, sem contrato ativo, estado aberto | `PublicationServiceTests` |
-| 20 | Atividades | I | Anúncios/propostas/contratos/notificações paginados | Browser (duas páginas e falha de carregamento simuladas) |
+| 20 | Atividades | I | Anúncios/propostas/contratos/notificações paginados | Browser (duas páginas, notificações e falha de carregamento simuladas) |
 | 21 | Recuperação de senha | P | Token opaco de uso único; e-mail apenas em log | `AuthServiceTests`; envio real fora do MVP |
-| 22 | Emerald Trust | I/V | Kit oficial, `identidade.css`, logos SVG, favicon e manifest | `BrandAssetsTests` + Browser (proporção da marca, mobile sem overflow); revisão humana de todas as telas pendente |
+| 22 | Emerald Trust | I/V | Kit oficial, `identidade.css`, logos SVG, favicon e manifest | `BrandAssetsTests` + Browser (proporção da marca e varredura mobile de home, explorar, publicar, atividades, perfil e moderação); revisão humana de todas as telas pendente |
 
 ## Regras de negócio: evitar a divergência de numeração
 
@@ -64,9 +64,9 @@ foram reabertos. A moderação permanece implementada sob RF17.
 | RNF | Evidência atual | O que falta comprovar |
 | --- | --- | --- |
 | 01 usabilidade | Toasts, carregamento, erros visíveis, bloqueio de envio duplicado | Teste com usuários |
-| 02 responsividade | Breakpoints e teste Browser na home móvel | Todas as telas e múltiplos tamanhos |
+| 02 responsividade | Breakpoints e varredura Browser de home, explorar, publicar, atividades, perfil e moderação em 360/390/448 px | Telas restantes (detalhe, formulários preenchidos) e navegadores reais |
 | 03 desempenho | Paginação e consultas por aba ativa | Medição de carga/latência com PostgreSQL |
-| 04 segurança | JWT, rate limit por IP, bloqueio de configuração demo em produção | Revisão independente; refresh em cookie HttpOnly ainda não implementado |
+| 04 segurança | JWT, rate limit por IP, bloqueio de configuração demo e de chave JWT de exemplo em produção | Revisão independente; refresh em cookie HttpOnly ainda não implementado |
 | 05 privacidade | DTO dedicado, avisos e `Cache-Control: no-store` na API | Política de privacidade e retenção revisada com o grupo |
 | 06 integridade | Entidades, transações, índices e suíte PostgreSQL | Executar suíte real onde o Docker estiver disponível |
 | 07 acessibilidade | Foco dos modais, Escape, teclado; auditoria anterior da moderação | Auditoria completa e leitores de tela |
@@ -79,6 +79,7 @@ foram reabertos. A moderação permanece implementada sob RF17.
 ## Situação de execução
 
 - A existência do workflow não significa que ele já rodou no GitHub.
+- `schema.sql` foi regenerado e confere com a migration `InitialCreate` (sem mudanças pendentes).
 - Testes PostgreSQL são **ignorados**, e não aprovados, quando falta `TASKO_TEST_POSTGRES`.
 - Testes Browser são ignorados quando falta `TASKO_E2E_URL`.
 - Não somar testes ignorados ao número de aprovados.
